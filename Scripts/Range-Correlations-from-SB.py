@@ -99,6 +99,13 @@ for t in taxa:
     Start manipulating the master dataframe to conduct correlation analyses
 
 '''
+print('\n\n---Calculating Taxa Richness Correlations---\n')
+# Run pairwise correlations using Kendall's tau
+rcols = ['nAmphibians','nBirds','nMammals','nReptiles']
+dfRichCorr = dfMaster[rcols]
+# Raw pairwise correlations using Kendall's tau
+print("  Calculating Kendalls's tau for pairwise taxa richness comparisons ....")
+pw = dfRichCorr.corr(method='kendall')
 
 # Calculate proportional richness and overall richness index
 dfMaster['ori-Amph'] = ((dfMaster['nBirds']/totBird)
@@ -114,14 +121,8 @@ dfMaster['ori-Rept'] = ((dfMaster['nAmphibians']/totAmph)
                         +(dfMaster['nBirds']/totBird)
                         +(dfMaster['nMammals']/totMamm))/3
 
-# run correlations
-rcols = ['nAmphibians','nBirds','nMammals','nReptiles']
-dfRichCorr = dfMaster[rcols]
-# Raw pairwise correlations using Kendall's tau
-pw = dfRichCorr.corr(method='kendall')
-
 # Spearman's rho correlations of raw richness v. overall richness index
-print("  Calculating Spearman's rho with overall richness index ....")
+print("  Calculating Spearman's rho with overall richness index ....\n")
 spcorrAmph = dfMaster['nAmphibians'].corr(dfMaster['ori-Amph'], method='spearman')
 spcorrBird = dfMaster['nBirds'].corr(dfMaster['ori-Bird'], method='spearman')
 spcorrMamm = dfMaster['nMammals'].corr(dfMaster['ori-Mamm'], method='spearman')
