@@ -16,6 +16,11 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from io import StringIO
+import matplotlib.pyplot as plt
+import matplotlib
+# Seaborn for pairplots
+import seaborn as sns
+
 
 starttime = datetime.now()
 timestamp = starttime.strftime('%Y-%m-%d')
@@ -39,7 +44,7 @@ totRept = 322 #327
 dfMaster = pd.DataFrame()
 
 '''
-    Connect to ScienceBase to pull down a HUC12 range tables.
+    Connect to ScienceBase to pull down HUC-12 range tables.
     This uses the ScienceBase item for species habitat maps
     and searches for range table files with species range data in it.
     The range maps item has a unique id (5951527de4b062508e3b1e79).
@@ -128,30 +133,6 @@ spcorrBird = dfMaster['nBirds'].corr(dfMaster['ori-Bird'], method='spearman')
 spcorrMamm = dfMaster['nMammals'].corr(dfMaster['ori-Mamm'], method='spearman')
 spcorrRept = dfMaster['nReptiles'].corr(dfMaster['ori-Rept'], method='spearman')
 
-'''
-# Pull the data of raw correlation coefficients from
-# the correlation dataframe element by element
-data = [pw.at['nBirds','nAmphibians'],
-       pw.at['nMammals','nAmphibians'],
-       pw.at['nMammals','nBirds'],
-       pw.at['nReptiles','nAmphibians'],
-       pw.at['nReptiles','nBirds'],
-       pw.at['nReptiles','nMammals']]
-
-# Make a static column of taxa pairs and insert
-# correlation data and HUC number
-pwdict = {'TaxaPair':['B-A','M-A','M-B','R-A','R-B','R-M'],
-          'KendallsTau':data}
-# Make the dataframe
-dfCC = pd.DataFrame(pwdict)
-# Reorder columns
-dfCC = dfCC[['TaxaPair', 'KendallsTau']]
-
-# Export to a table
-print("  Exporting correlations to tables ....")
-dfCC.to_csv(workDir + huc + "_PairwiseCorrelations.txt")
-'''
-
 # Pull Spearman's correlation data
 spdata = [spcorrAmph, spcorrBird, spcorrMamm, spcorrRept]
 # Make a static column of taxa and insert
@@ -165,6 +146,51 @@ dfSR = dfSR[['Taxon','SpearmansRho']]
 #dfSR = dfSR.set_index(['HUC'])
 # Export to a table
 #dfSR.to_csv(corrDir + huc + "_SpearmanCorrelations.txt")
+
+'''
+    Plot pairwise data using the PairGrid class
+    in the Seaborn visualization library 
+
+'''
+
+## First pull out only the pairwise columns from the master dataframe
+dfPW = dfMaster[['nAmphibians','nBirds','nMammals','nReptiles']]
+
+
+# Make a function to calculate Pearson's and Kendall's correlation coefficients
+# for pairwise comparisons and make them labels for scatter plots
+def corrs(x, y, **kwargs):
+    from scipy.stats import kendalltau
+    # Calculate Pearson coefficient value
+    p = np.corrcoef(x, y)[0][1]
+    # Calculate Kendall coefficient values
+    t = kendalltau(x, y)[0]
+    
+    # Make the rho label
+    label1 = r'$\rho$ = ' + str(round(p, 2))
+    # Make the tau label
+    label2 = r'$\tau$ = ' + str(round(t, 2))
+    
+    # Add each label to the plot
+    ax = plt.gca()
+    ax.annotate(label1, xy = (0.1, 0.9), xycoords = ax.transAxes)
+    ax.annotate(label2, xy = (0.1, 0.8), xycoords = ax.transAxes)
+
+# Plot the pairwise comparisons with PairGrid where:
+#  the diagonal of the grid plot are histograms for that taxa's richness within range HUCs
+#  the upper portion of the grid plot are kernel density contour plots
+#  the lower of the grid plot are scatter plots with a trend line 
+#  and Pearson and Kendall correlation coefficents for each comparison
+
+grid = sns.PairGrid(data= dfPW, size = 3)
+grid = grid.map_upper(sns.kdeplot,n_levels=30, cmap='jet')
+grid = grid.map_diag(plt.hist, bins = 20, edgecolor='k')
+grid = grid.map_lower(sns.regplot, marker='.', scatter_kws={"alpha":0.3, "edgecolor":'none', "color":'olivedrab'}, line_kws={"color":'black',"alpha":0.5,"lw":1})
+grid = grid.map_lower(corrs)
+
+
+
+
 
 
 
