@@ -5,11 +5,49 @@ Created on Mon Jul  1 14:22:00 2019
 @author: mjrubino
 """
 
+"""
+
+                        Range-Correlations-from-SB.py
+        
+    Use this to compile range richness data using range tables in ScienceBase
+    and conduct correlation analyses of pairwise taxa richness comparisons and
+    an overall richness index.
+    
+    This uses the sciencebasepy package to access taxa range files:
+        National_GAP_Amphibians_Range_Table.txt
+        National_GAP_Birds_Range_Table.txt
+        National_GAP_Mammals_Range_Table.txt
+        National_GAP_Reptiles_Range_Table.txt
+    
+    Each of these files contain columns with 6 letter species code, the 12-digit
+    HUC code, and values for species origin, presence, reproductive use, and
+    season in each HUC.
+    
+    Pairwise comparisons between taxa groups are made and plotted and correlation
+    coefficients are calculated using Pearson and Kendall methods. The overall
+    richness index is calculated and compared to each taxa group to test that
+    group's richness with all other groups' richness.
+
+    Package dependancies:
+        sciencebasepy
+        pyodbc
+        pandas
+        numpy
+        SciPy
+        datetime (for calculating processing time)
+        StringIO
+        Seaborn
+        datetime
+        seaborn
+        matplotlib
 
 
+@author: mjrubino
+11 July 2019
 
+"""
 
-
+##############################################################################
 
 import sys, sciencebasepy
 import pandas as pd
@@ -28,8 +66,7 @@ timestamp = starttime.strftime('%Y-%m-%d')
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #            ++++ Directory Locations ++++
 analysisDir = 'C:/Data/USGS Analyses/'
-workDir = analysisDir + 'Range-vs-Habitat/'
-tempDir = workDir + 'downloadtemp/'
+workDir = analysisDir + 'Taxa-Richness-Correlations/'
 
 pd.set_option('display.max_columns', 10)
 
@@ -65,6 +102,7 @@ coltypes = {'strUC':str,
 #taxa = ['Amphibians','Reptiles'] 
 taxa = ['Amphibians','Birds','Mammals','Reptiles']
 for t in taxa:
+    print("="*65)
     print("\nWorking on Range Table for " + t + " ....")
     for file in rangeItem["files"]:
         # Search for the file name pattern in the range item files dictionary
@@ -185,14 +223,52 @@ def corrs(x, y, **kwargs):
 grid = sns.PairGrid(data= dfPW, size = 3)
 grid = grid.map_upper(sns.kdeplot,n_levels=30, cmap='jet')
 grid = grid.map_diag(plt.hist, bins = 20, edgecolor='k')
-grid = grid.map_lower(sns.regplot, marker='.', scatter_kws={"alpha":0.3, "edgecolor":'none', "color":'olivedrab'}, line_kws={"color":'black',"alpha":0.5,"lw":1})
+grid = grid.map_lower(sns.regplot, marker='.',
+                      scatter_kws={"alpha":0.3, "edgecolor":'none', "color":'olivedrab'},
+                      line_kws={"color":'black',"alpha":0.5,"lw":1})
 grid = grid.map_lower(corrs)
 
+'''
+    Now make scatterplots for each taxa group comparison with the
+    Overall Richness Index with that group removed (I).
+    The non-parametric Spearman's correlation coefficient (rho) is
+    calculated for each taxa comparison because the data are not
+    normally distributed.
+
+'''
+### Make individual taxa subplots on a 2x2 figure ###
+
+fig, axs = plt.subplots(2, 2, figsize=(11, 11))
+axs = axs.flatten()
 
 
+# Add an iterator variable
+i=0
+for ax, t in zip(axs, taxa):
 
+    # Pull out the taxa specific data from dfMaster
+    ncol = 'n{0}'.format(t)
+    icol = 'ori-{0}'.format(t[:4])
+    dfT = dfMaster[[ncol, icol]]
+    
+    # Set an axes title
+    ax.set_title(t)
+    
+    # Use the default color palette from Seaborn as variables
+    c = sns.color_palette()[i]
+    
+    # Plot a scatter plot and add a trend line
+    # Use the Seaborn colors in the plot with all taxa for individual taxa
+    sns.regplot(x=dfT[ncol],y=dfT[icol],marker='.', ax=ax,
+               scatter_kws={"alpha":0.3, "edgecolor":'none', "color":c},
+               line_kws={"color":'black',"alpha":0.5,"lw":1})
 
-
+    sr = dfSR.iloc[i,1]
+    # Make the tau label
+    label = r'Spearman $\rho$ = ' + str(round(sr, 4))
+    ax.annotate(label, xy = (0.45, 0.9), xycoords = ax.transAxes)
+    
+    i+=1
 
 
 endtime = datetime.now()
