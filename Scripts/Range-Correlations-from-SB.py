@@ -264,9 +264,9 @@ for ax, t in zip(axs, taxa):
                line_kws={"color":'black',"alpha":0.5,"lw":1})
 
     sr = dfSR.iloc[i,1]
-    # Make the tau label
-    label = r'Spearman $\rho$ = ' + str(round(sr, 4))
-    ax.annotate(label, xy = (0.45, 0.9), xycoords = ax.transAxes)
+    # Make the label
+    label = r'Spearman $\rho$ = ' + str(round(sr, 2))
+    ax.annotate(label, xy = (0.45, 0.9), size = 12, xycoords = ax.transAxes)
     
     i+=1
 
